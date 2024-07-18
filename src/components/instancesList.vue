@@ -1,13 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
 
 const emits = defineEmits(['openUpdateInstance'])
 
-defineProps(['instances'])
+const props = defineProps<{
+    instances: Object | any
+}>()
+
+function handleClick(id: number) {
+    emits('openUpdateInstance', id)
+}
 </script>
 
 <template>
-    <div v-for="instance in instances" :key="instance.id">
+    <div v-for="instance in props.instances" :key="instance.id">
         <div class="card mb-2">
             <div class="card-body py-2">
                 <div class="d-flex">
@@ -25,7 +31,7 @@ defineProps(['instances'])
                         <span class="text-muted">Status: {{ instance.status }}</span>
                     </div>
                     <div class="ms-auto d-flex align-items-center">
-                        <button class="btn btn-secondary text-white me-2" @click="openUpdateInstance(instance.id)" data-bs-toggle="modal" data-bs-target="#updateInstanceModal">
+                        <button class="btn btn-secondary text-white me-2" @click="handleClick(instance.id)" data-bs-toggle="modal" data-bs-target="#updateInstanceModal">
                             <i class="fa fa-edit"></i>
                         </button>
                         <RouterLink :to="`/detail/${instance.id}`" class="btn btn-primary me-2">

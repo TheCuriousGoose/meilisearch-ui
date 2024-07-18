@@ -1,121 +1,178 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { Meilisearch } from 'meilisearch'
+import instanceInfo from '../components/InstanceInfo.vue'
+import JsonViewer from '../components/JsonViewer.vue'
+import IndexesList from '../components/IndexesList.vue'
 
 const route = useRoute()
 const instanceId = route.params.id
 
 const instances = useLocalStorage('instances', [])
-const instance = instances.value.find((instance) => instance.id == instanceId)
+const instance = instances.value.find((instance: any) => instance.id == instanceId) || { url: '', key: '' }
 
 const client = new Meilisearch({
     host: instance.url,
     apiKey: instance.key
 })
 
-const indexes = ref('')
-const DBSize = ref('')
-const documents = ref('')
+const selectedIndex = ref<string>('')
+const indexes = ref<object | any>([])
+const documents = ref<object | any>([])
 
-async function getStats() {
-    let meiliSize = await client.getStats()
-    DBSize.value = meiliSize['databaseSize']
+const searchQuery = ref<string>('')
+const filters = ref<string>('')
+const sort = ref<string>('')
 
-    console.log(meiliSize)
+const timeTaken = ref<number>(0)
+const totalResults = ref<number>(0)
+const shownResults = ref<number>(0)
 
-    let statsIndexes = Object.values(meiliSize['indexes'])
-    let numberOfDocuments = 0
+watch(
+    searchQuery,
+    debounce(() => {
+        if (selectedIndex.value) {
+            updateSearch(selectedIndex.value)
+        }
+    }, 200)
+)
 
-    for (const index of statsIndexes) {
-        numberOfDocuments += index.numberOfDocuments
+function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
+    let timerId: ReturnType<typeof setTimeout>
+
+    return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+        const context = this
+        clearTimeout(timerId)
+        timerId = setTimeout(() => {
+            func.apply(context, args)
+        }, delay)
     }
-
-    documents.value = numberOfDocuments
 }
+
+watch(filters, () => {
+    if (selectedIndex.value) {
+        updateSearch(selectedIndex.value)
+    }
+})
 
 async function getIndexes() {
+    let meiliStats = await client.getStats()
     let meiliIndexes = await client.getRawIndexes()
-    indexes.value = meiliIndexes['results']
+
+    indexes.value = meiliStats.indexes
+
+    meiliIndexes.results.forEach((index: any) => {
+        let extraIndex = indexes.value[index.uid]
+
+        if (extraIndex) {
+            index.numberOfDocuments = extraIndex.numberOfDocuments
+        }
+    })
+
+    indexes.value = meiliIndexes.results
+
+    if (meiliIndexes.results.length > 0) {
+        updateSearch(meiliIndexes.results[0].uid)
+    }
 }
 
-function formatSize(bytes) {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-    if (bytes === 0) return '0 Byte'
-    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)))
-    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
-}
+async function updateSearch(uid: string) {
+    try {
+        selectedIndex.value = uid
 
-function formatDate(isoDate) {
-    const date = new Date(isoDate)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0') // getMonth() is zero-based
-    const year = date.getFullYear()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    const seconds = date.getSeconds().toString().padStart(2, '0')
+        let formattedFilters = filters.value
+            .split(',')
+            .map((filter) => filter.trim())
+            .filter((filter) => {
+                return /^(\w+)\s*=\s*(.+)$/.test(filter)
+            })
 
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
+        let docs = await client.index(uid).search(searchQuery.value, {
+            filter: formattedFilters
+            // sort: sort.value
+        })
+
+        documents.value = docs.hits
+        timeTaken.value = docs.processingTimeMs
+        totalResults.value = docs.estimatedTotalHits
+        shownResults.value = docs.hits.length
+    } catch (error) {
+        // console.error('Error in search operation:', error);
+        // documents.value = [];
+        // timeTaken.value = 0;
+        // totalResults.value = 0;
+        // shownResults.value = 0;
+    }
 }
 
 onMounted(() => {
     getIndexes()
-    getStats()
 })
 </script>
 
 <template>
     <div class="container-fluid" style="max-height: 100vh">
+        <instanceInfo :client="client" />
         <div class="row">
             <div class="col-3">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title font-monospace">Indexes</div>
-                    </div>
-                    <div class="card-body overflow-auto mb-1" style="max-height: 83vh">
-                        <div v-for="(meiliIndex, index) of indexes" :key="index">
-                            <div class="card mb-2">
-                                <div class="card-body">
-                                    <p>{{ meiliIndex.uid }}</p>
-                                    <small class="text-muted">Last update: {{ formatDate(meiliIndex.updatedAt) }}</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <IndexesList :indexes="indexes" :selectedIndex="selectedIndex" @update-search="updateSearch" />
             </div>
             <div class="col-9">
-                <div class="card mb-2">
-                    <div class="card-header">
-                        <div class="card-title font-monospace">Information</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-2">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <p class="fs-5">{{ formatSize(DBSize) }}</p>
-                                        <small class="text-muted">Database size</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-2">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <p class="fs-5">{{ documents }}</p>
-                                        <small class="text-muted">Amount of documents</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card mb-2">
+                <div class="card mb-2" style="max-height: 75vh">
                     <div class="card-header">
                         <div class="card-title font-monospace">Documents</div>
                     </div>
-                    <div class="card-body"></div>
+                    <div class="card-body overflow-auto">
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <label for="filters">Search</label>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text bg-dark">
+                                        <i class="fa fa-search"></i>
+                                    </span>
+                                    <input type="text" v-model="searchQuery" class="form-control bg-dark" placeholder="" />
+                                </div>
+                                <div class="d-flex gap-2 mb-2">
+                                    <div class="d-flex flex-column w-100">
+                                        <label for="filters">Filters</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-dark">
+                                                <i class="fa fa-filter"></i>
+                                            </span>
+                                            <input type="text" v-model="filters" name="filters" id="filters" class="form-control bg-dark" />
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-column w-100">
+                                        <label for="sort">Sort</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-dark">
+                                                <i class="fa fa-sort"></i>
+                                            </span>
+                                            <input type="text" class="form-control bg-dark" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <p class="fs-5 d-flex align-items-center">
+                                Results <span class="ms-2 fs-6 text-muted">(Time spent: {{ timeTaken }}ms)</span>
+                            </p>
+                            <div>
+                                <p class="text-muted">{{ shownResults }} shown out of {{ totalResults }} results</p>
+                            </div>
+                        </div>
+
+                        <div v-for="(document, index) in documents" :key="index">
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <JsonViewer :data="document"></JsonViewer>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

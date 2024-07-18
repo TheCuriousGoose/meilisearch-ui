@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import instancesList from '@/components/instancesList.vue'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { Meilisearch } from 'meilisearch'
+import instancesList from '../components/InstancesList.vue'
 
 let form = ref({
     name: 'Default',
@@ -12,10 +12,10 @@ let form = ref({
 
 let instanceToUpdate = 0
 
-const instances = useLocalStorage('instances', [])
+const instances = useLocalStorage<object[]>('instances', [])
 
-function openUpdateInstance(id: int) {
-    const index = instances.value.findIndex((instance) => instance.id === id)
+function openUpdateInstance(id: number) {
+    const index = instances.value.findIndex((instance: any) => instance.id === id)
 
     instanceToUpdate = id
 
@@ -115,7 +115,7 @@ onMounted(async () => {
                         <div class="card-title fs-5 my-2">Please select your instance</div>
                     </div>
                     <div class="card-body">
-                        <instancesList :instances="instances" />
+                        <instancesList :instances="instances" @open-update-instance="openUpdateInstance" />
                     </div>
                     <div class="card-body d-flex flex-column">
                         <button class="btn btn-light w-100" data-bs-toggle="modal" data-bs-target="#newInstanceModal">

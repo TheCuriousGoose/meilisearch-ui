@@ -70,11 +70,19 @@ $scrollbar-thumb-hover-color: #555;
         }
     }
 
+    &.card-hover {
+        transition: transform 0.3s ease-in-out;
+
+        &:hover {
+            border-color: $white;
+        }
+    }
+
     .card-body {
         padding: 1rem;
     }
 
-    .card-footer {
+    &.card-footer {
         border-top: $border-width solid $border-color;
         padding-top: 0.2rem;
         padding-bottom: 0.2rem;
@@ -98,4 +106,28 @@ p {
 
 .bg-fade {
     background: linear-gradient(150.53deg, rgba(255, 92, 178, 0.25) -2px, rgba(107, 86, 220, 0.073) 300px, rgba(20, 0, 45, 0) 800px), linear-gradient(180deg, #14002d -5px, #1c0040 1000px, #0e0021) !important;
+}
+
+.json-viewer {
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+}
+
+.string {
+    color: #6abf69; /* Green */
+}
+
+.number {
+    color: #fd971f; /* Dark Orange */
+}
+
+.boolean {
+    color: #66d9ef; /* Blue */
+}
+
+.null {
+    color: #d33682; /* Magenta */
+}
+
+.key {
+    color: #f92672; /* Light Red */
 }
