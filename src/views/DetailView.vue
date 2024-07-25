@@ -7,6 +7,16 @@ import instanceInfo from '../components/InstanceInfo.vue'
 import JsonViewer from '../components/JsonViewer.vue'
 import IndexesList from '../components/IndexesList.vue'
 
+interface SearchObject {
+    filter: any
+    sort?: string[]
+}
+
+interface SortableAttribute {
+    value: string
+    label: string
+}
+
 const route = useRoute()
 const instanceId = route.params.id
 
@@ -21,6 +31,8 @@ const client = new Meilisearch({
 const selectedIndex = ref<string>('')
 const indexes = ref<object | any>([])
 const documents = ref<object | any>([])
+
+const sortableAttributes = ref<any>([])
 
 const searchQuery = ref<string>('')
 const filters = ref<string>('')
@@ -57,6 +69,38 @@ watch(filters, () => {
     }
 })
 
+watch(sort, () => {
+    if (selectedIndex.value) {
+        updateSearch(selectedIndex.value)
+    }
+})
+
+async function updateSortableAttributes() {
+    try {
+        const sortables: string[] = await client.index(selectedIndex.value).getSortableAttributes()
+
+        sortableAttributes.value = []
+
+        sortables.forEach((sortable: string) => {
+            if (sortable === '_geo') {
+                return
+            }
+
+            sortableAttributes.value.push({
+                value: `${sortable}:asc`,
+                label: `${sortable} (asc)`
+            })
+
+            sortableAttributes.value.push({
+                value: `${sortable}:desc`,
+                label: `${sortable} (desc)`
+            })
+        })
+    } catch (error) {
+        console.error('Error fetching sortable attributes:', error)
+    }
+}
+
 async function getIndexes() {
     let meiliStats = await client.getStats()
     let meiliIndexes = await client.getRawIndexes()
@@ -81,6 +125,7 @@ async function getIndexes() {
 async function updateSearch(uid: string) {
     try {
         selectedIndex.value = uid
+        updateSortableAttributes()
 
         let formattedFilters = filters.value
             .split(',')
@@ -89,10 +134,23 @@ async function updateSearch(uid: string) {
                 return /^(\w+)\s*=\s*(.+)$/.test(filter)
             })
 
-        let docs = await client.index(uid).search(searchQuery.value, {
+        let searchObject: SearchObject = {
             filter: formattedFilters
-            // sort: sort.value
-        })
+        }
+
+        if (sort.value.length > 0) {
+            let sortFields = sort.value.split(',').map((sort) => sort.trim())
+
+            console.log(sortFields)
+
+            sortFields.filter((sortField) => {
+                return /^\w+:(asc|desc)$/.test(sortField)
+            })
+
+            searchObject['sort'] = sortFields
+        }
+
+        let docs = await client.index(uid).search(searchQuery.value, searchObject)
 
         documents.value = docs.hits
         timeTaken.value = docs.processingTimeMs
@@ -115,12 +173,12 @@ onMounted(() => {
 <template>
     <div class="container-fluid" style="max-height: 100vh">
         <instanceInfo :client="client" />
-        <div class="row">
+        <div class="row d-flex">
             <div class="col-3">
                 <IndexesList :indexes="indexes" :selectedIndex="selectedIndex" @update-search="updateSearch" />
             </div>
-            <div class="col-9">
-                <div class="card mb-2" style="max-height: 75vh">
+            <div class="col-9 mb-1">
+                <div class="card mb-2" style="max-height: 79vh">
                     <div class="card-header">
                         <div class="card-title font-monospace">Documents</div>
                     </div>
@@ -150,7 +208,9 @@ onMounted(() => {
                                             <span class="input-group-text bg-dark">
                                                 <i class="fa fa-sort"></i>
                                             </span>
-                                            <input type="text" class="form-control bg-dark" />
+                                            <select type="text" v-model="sort" class="form-control bg-dark">
+                                                <option v-for="(sortableAttribute, index) in sortableAttributes" :key="index" :value="sortableAttribute.value">{{ sortableAttribute.label }}</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
