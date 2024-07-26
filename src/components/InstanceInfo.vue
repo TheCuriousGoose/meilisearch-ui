@@ -43,8 +43,11 @@ onMounted(() => {
     <div class="card mb-2">
         <div class="card-header">
             <div class="card-title font-monospace">Information</div>
+            <div class="ms-auto" data-bs-toggle="collapse" data-bs-target="#informationCollapse">
+                <i class="fa fa-caret-up"></i>
+            </div>
         </div>
-        <div class="card-body">
+        <div class="card-body collapse show" id="informationCollapse">
             <div class="d-flex gap-2">
                 <InformationCard>
                     {{ formatSize(DBSize) }}

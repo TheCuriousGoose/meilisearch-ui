@@ -1,4 +1,5 @@
 import './assets/scss/app.scss'
+import 'vue-multiselect/dist/vue-multiselect.css'
 import 'bootstrap'
 
 import { createApp } from 'vue'

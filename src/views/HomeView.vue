@@ -4,6 +4,15 @@ import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { Meilisearch } from 'meilisearch'
 import instancesList from '../components/InstancesList.vue'
 
+// Define the type for the instance
+interface Instance {
+    id: number;
+    name: string;
+    url: string;
+    key: string;
+    status?: string;
+}
+
 let form = ref({
     name: 'Default',
     url: 'http://localhost:7700',
@@ -12,10 +21,11 @@ let form = ref({
 
 let instanceToUpdate = 0
 
-const instances = useLocalStorage<object[]>('instances', [])
+// Use the defined type
+const instances = useLocalStorage<Instance[]>('instances', [])
 
 function openUpdateInstance(id: number) {
-    const index = instances.value.findIndex((instance: any) => instance.id === id)
+    const index = instances.value.findIndex((instance) => instance.id === id)
 
     instanceToUpdate = id
 

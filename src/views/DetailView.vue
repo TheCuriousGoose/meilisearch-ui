@@ -6,6 +6,8 @@ import { Meilisearch } from 'meilisearch'
 import instanceInfo from '../components/InstanceInfo.vue'
 import JsonViewer from '../components/JsonViewer.vue'
 import IndexesList from '../components/IndexesList.vue'
+import Multiselect from 'vue-multiselect'
+import DynamicTable from '../components/DynamicTable.vue'
 
 interface SearchObject {
     filter: any
@@ -16,6 +18,9 @@ interface SortableAttribute {
     value: string
     label: string
 }
+
+const viewType = ref<'table' | 'raw'>('table');
+const errorVisible = ref<string>()
 
 const route = useRoute()
 const instanceId = route.params.id
@@ -36,7 +41,7 @@ const sortableAttributes = ref<any>([])
 
 const searchQuery = ref<string>('')
 const filters = ref<string>('')
-const sort = ref<string>('')
+const sort = ref<string[]>([])
 
 const timeTaken = ref<number>(0)
 const totalResults = ref<number>(0)
@@ -139,9 +144,8 @@ async function updateSearch(uid: string) {
         }
 
         if (sort.value.length > 0) {
-            let sortFields = sort.value.split(',').map((sort) => sort.trim())
 
-            console.log(sortFields)
+            let sortFields = sort.value.map((sortItem: any) => sortItem.value);
 
             sortFields.filter((sortField) => {
                 return /^\w+:(asc|desc)$/.test(sortField)
@@ -156,12 +160,9 @@ async function updateSearch(uid: string) {
         timeTaken.value = docs.processingTimeMs
         totalResults.value = docs.estimatedTotalHits
         shownResults.value = docs.hits.length
-    } catch (error) {
-        // console.error('Error in search operation:', error);
-        // documents.value = [];
-        // timeTaken.value = 0;
-        // totalResults.value = 0;
-        // shownResults.value = 0;
+        errorVisible.value = '';
+    } catch (meiliError: any) {
+        errorVisible.value = meiliError.toString().split('.')[0].split(':')[1];
     }
 }
 
@@ -171,16 +172,23 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="container-fluid" style="max-height: 100vh">
+    <div class="container-fluid">
         <instanceInfo :client="client" />
         <div class="row d-flex">
             <div class="col-3">
                 <IndexesList :indexes="indexes" :selectedIndex="selectedIndex" @update-search="updateSearch" />
             </div>
             <div class="col-9 mb-1">
-                <div class="card mb-2" style="max-height: 79vh">
+                <div class="card mb-2">
                     <div class="card-header">
                         <div class="card-title font-monospace">Documents</div>
+                        <div class="ms-auto">
+                            <select name="viewType" v-model="viewType" id="viewType" class="form-select">
+                                <option value="raw">Raw</option>
+                                <option value="table">Table</option>
+                            </select>
+
+                        </div>
                     </div>
                     <div class="card-body overflow-auto">
                         <div class="card mb-2">
@@ -190,7 +198,8 @@ onMounted(() => {
                                     <span class="input-group-text bg-dark">
                                         <i class="fa fa-search"></i>
                                     </span>
-                                    <input type="text" v-model="searchQuery" class="form-control bg-dark" placeholder="" />
+                                    <input type="text" v-model="searchQuery" class="form-control bg-dark"
+                                        placeholder="" />
                                 </div>
                                 <div class="d-flex gap-2 mb-2">
                                     <div class="d-flex flex-column w-100">
@@ -199,7 +208,8 @@ onMounted(() => {
                                             <span class="input-group-text bg-dark">
                                                 <i class="fa fa-filter"></i>
                                             </span>
-                                            <input type="text" v-model="filters" name="filters" id="filters" class="form-control bg-dark" />
+                                            <input type="text" v-model="filters" name="filters" id="filters"
+                                                class="form-control bg-dark" />
                                         </div>
                                     </div>
                                     <div class="d-flex flex-column w-100">
@@ -208,12 +218,13 @@ onMounted(() => {
                                             <span class="input-group-text bg-dark">
                                                 <i class="fa fa-sort"></i>
                                             </span>
-                                            <select type="text" v-model="sort" class="form-control bg-dark">
-                                                <option v-for="(sortableAttribute, index) in sortableAttributes" :key="index" :value="sortableAttribute.value">{{ sortableAttribute.label }}</option>
-                                            </select>
+                                            <multiselect v-model="sort" :options="sortableAttributes" :searchable="true"
+                                                :multiple="true" label="label" track-by="value"
+                                                class="form-control multiselect"></multiselect>
                                         </div>
                                     </div>
                                 </div>
+                                <p class="invalid-feedback d-block"> {{ errorVisible }}</p>
                             </div>
                         </div>
                         <div class="d-flex justify-content-between">
@@ -225,13 +236,14 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div v-for="(document, index) in documents" :key="index">
+                        <div v-for="(document, index) in documents" :key="index" v-if="viewType == 'raw'">
                             <div class="card mb-2">
                                 <div class="card-body">
                                     <JsonViewer :data="document"></JsonViewer>
                                 </div>
                             </div>
                         </div>
+                        <DynamicTable :data="documents" v-if="viewType == 'table'"></DynamicTable>
                     </div>
                 </div>
             </div>

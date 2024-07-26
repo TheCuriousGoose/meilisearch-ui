@@ -3,7 +3,7 @@ import { RouterView } from 'vue-router'
 </script>
 
 <template>
-    <main class="mt-3">
+    <main class="pt-3">
         <RouterView />
     </main>
 </template>
