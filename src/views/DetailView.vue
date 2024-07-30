@@ -8,6 +8,7 @@ import JsonViewer from '../components/JsonViewer.vue'
 import IndexesList from '../components/IndexesList.vue'
 import Multiselect from 'vue-multiselect'
 import DynamicTable from '../components/DynamicTable.vue'
+import FacetModal from '../components/FacetModal.vue'
 
 interface SearchObject {
     filter: any
@@ -19,7 +20,8 @@ interface SortableAttribute {
     label: string
 }
 
-const viewType = ref<'table' | 'raw'>('table');
+// Use localStorage for viewType
+const viewType = useLocalStorage<'table' | 'raw'>('viewType', 'table')
 const errorVisible = ref<string>()
 
 const route = useRoute()
@@ -33,11 +35,13 @@ const client = new Meilisearch({
     apiKey: instance.key
 })
 
-const selectedIndex = ref<string>('')
+const selectedIndex = useLocalStorage<string>('selectedIndex', '')
 const indexes = ref<object | any>([])
 const documents = ref<object | any>([])
 
 const sortableAttributes = ref<any>([])
+const filterableAttributes = ref<any>([])
+const facets = ref<any>([])
 
 const searchQuery = ref<string>('')
 const filters = ref<string>('')
@@ -69,15 +73,20 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (
 }
 
 watch(filters, () => {
-    if (selectedIndex.value) {
-        updateSearch(selectedIndex.value)
-    }
+    debounce(() => {
+        if (selectedIndex.value) {
+            updateSearch(selectedIndex.value)
+        }
+    }, 200)
 })
 
 watch(sort, () => {
-    if (selectedIndex.value) {
+    debounce(() => {
+        if (selectedIndex.value) {
         updateSearch(selectedIndex.value)
     }
+    }, 200)
+
 })
 
 async function updateSortableAttributes() {
@@ -123,14 +132,30 @@ async function getIndexes() {
     indexes.value = meiliIndexes.results
 
     if (meiliIndexes.results.length > 0) {
-        updateSearch(meiliIndexes.results[0].uid)
+        updateSearch(selectedIndex.value.length > 0 ? selectedIndex.value : meiliIndexes.results[0].uid)
     }
 }
 
-async function updateSearch(uid: string) {
+async function updateFilterableAttributes() {
+    let attributes = await client.index(selectedIndex.value).getFilterableAttributes();
+    filterableAttributes.value = attributes;
+}
+
+async function updateFaces() {
+    facets.value = await client.index(selectedIndex.value).getFaceting();
+}
+
+async function updateSearch(uid: string, changeOfIndex: boolean = false) {
     try {
         selectedIndex.value = uid
         updateSortableAttributes()
+        updateFilterableAttributes()
+        updateFaces();
+
+        if (changeOfIndex) {
+            filters.value = '';
+            sort.value = [];
+        }
 
         let formattedFilters = filters.value
             .split(',')
@@ -182,12 +207,12 @@ onMounted(() => {
                 <div class="card mb-2">
                     <div class="card-header">
                         <div class="card-title font-monospace">Documents</div>
-                        <div class="ms-auto">
+                        <div class="ms-auto d-flex gap-2">
+                            <FacetModal :facet="facets"></FacetModal>
                             <select name="viewType" v-model="viewType" id="viewType" class="form-select">
                                 <option value="raw">Raw</option>
                                 <option value="table">Table</option>
                             </select>
-
                         </div>
                     </div>
                     <div class="card-body overflow-auto">
@@ -204,12 +229,19 @@ onMounted(() => {
                                 <div class="d-flex gap-2 mb-2">
                                     <div class="d-flex flex-column w-100">
                                         <label for="filters">Filters</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-dark">
+                                        <div class="input-group dropdown">
+                                            <span class="input-group-text bg-dark" data-bs-toggle="dropdown"
+                                                aria-expanded="false">
                                                 <i class="fa fa-filter"></i>
                                             </span>
                                             <input type="text" v-model="filters" name="filters" id="filters"
                                                 class="form-control bg-dark" />
+                                            <div class="dropdown-menu p-2 overflow-auto" style="max-height: 10rem;">
+                                                <p class="fw-bold mb-2">Filterable attributes</p>
+                                                <p v-for="(attribute, index) in filterableAttributes" :key="index">
+                                                    {{ attribute }}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="d-flex flex-column w-100">
@@ -243,7 +275,9 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
-                        <DynamicTable :data="documents" v-if="viewType == 'table'"></DynamicTable>
+                        <div class="table-responsive" v-if="viewType == 'table'">
+                            <DynamicTable :data="documents"></DynamicTable>
+                        </div>
                     </div>
                 </div>
             </div>

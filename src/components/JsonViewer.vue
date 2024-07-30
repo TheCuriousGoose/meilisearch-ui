@@ -7,12 +7,13 @@
 <script setup lang="ts">
 import { defineProps, computed } from 'vue'
 
-const props = defineProps<{
-    data: Array<any>
-}>()
-
+const props = defineProps({
+    data: {
+        type: Object
+    }
+});
 const formattedJson = computed(() => {
-    return syntaxHighlight(JSON.stringify(props.data, null, 2))
+    return syntaxHighlight(typeof props.data == 'string' ?  JSON.stringify(JSON.parse(props.data), null, 4) : JSON.stringify(props.data, null, 4))
 })
 
 function syntaxHighlight(json: string) {

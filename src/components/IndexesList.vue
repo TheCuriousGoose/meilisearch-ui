@@ -3,8 +3,8 @@ import { defineProps, defineEmits } from 'vue'
 
 const emits = defineEmits(['updateSearch'])
 
-function updateSearch(index: string) {
-    emits('updateSearch', index)
+function updateSearch(index: string, changeOfIndex: boolean) {
+    emits('updateSearch', index, changeOfIndex)
 }
 
 const props = defineProps<{
@@ -30,11 +30,11 @@ function formatDate(isoDate: string) {
         <div class="card-header">
             <div class="card-title font-monospace">Indexes</div>
         </div>
-        <div class="card-body overflow-auto mb-1" style="max-height: 75vh">
+        <div class="card-body overflow-auto mb-1">
             <div v-for="(meiliIndex, index) of props.indexes" :key="index">
                 <div
                     class="card card-hover mb-2"
-                    @click="updateSearch(meiliIndex.uid)"
+                    @click="updateSearch(meiliIndex.uid, true)"
                     :class="{
                         'border-secondary': meiliIndex.uid === props.selectedIndex
                     }"

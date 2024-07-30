@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { defineProps } from 'vue';
 import JsonViewer from '../components/JsonViewer.vue';
 
 const props = defineProps<{
-    jsonData: any;
+    jsonData: object;
 }>();
 </script>
 

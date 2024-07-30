@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { defineProps, ref, onMounted } from 'vue'
+import { defineProps, ref, onMounted, watch } from 'vue'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
 import InformationCard from './InformationCard.vue'
 
 const DBSize = ref<number>(0)
@@ -27,6 +28,7 @@ async function getStats() {
     let meiliVersion = await (props.client ?? {}).getVersion()
     version.value = meiliVersion['pkgVersion']
 }
+
 function formatSize(bytes: number) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
     if (bytes === 0) return '0 Byte'
@@ -34,20 +36,26 @@ function formatSize(bytes: number) {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
 }
 
+const isExpanded = useLocalStorage<boolean>('infoCard', true)
+
 onMounted(() => {
     getStats()
 })
+
+function toggleCollapse() {
+    isExpanded.value = !isExpanded.value
+}
 </script>
 
 <template>
     <div class="card mb-2">
-        <div class="card-header">
+        <div class="card-header d-flex">
             <div class="card-title font-monospace">Information</div>
-            <div class="ms-auto" data-bs-toggle="collapse" data-bs-target="#informationCollapse">
-                <i class="fa fa-caret-up"></i>
+            <div class="ms-auto" @click="toggleCollapse" :aria-expanded="isExpanded">
+                <i :class="isExpanded ? 'fa fa-caret-up' : 'fa fa-caret-down'"></i>
             </div>
         </div>
-        <div class="card-body collapse show" id="informationCollapse">
+        <div class="card-body collapse" :class="{ show: isExpanded }" id="informationCollapse">
             <div class="d-flex gap-2">
                 <InformationCard>
                     {{ formatSize(DBSize) }}

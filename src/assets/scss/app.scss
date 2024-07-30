@@ -249,3 +249,21 @@ p {
         background: $secondary !important;
     }
 }
+
+.table-transparent-striped {
+    th {
+        background-color: $transparent-white
+    }
+
+    tr:nth-child(even) {
+        td {
+            background-color: $transparent-white
+        }
+    }
+
+    tr:nth-child(odd) {
+        td {
+            background-color: lighten($transparent-white, 20%)
+        }
+    }
+}
