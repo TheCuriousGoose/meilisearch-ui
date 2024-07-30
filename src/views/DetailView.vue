@@ -9,15 +9,13 @@ import IndexesList from '../components/IndexesList.vue'
 import Multiselect from 'vue-multiselect'
 import DynamicTable from '../components/DynamicTable.vue'
 import FacetModal from '../components/FacetModal.vue'
+import { debounce } from '@/utils/debounce'
 
 interface SearchObject {
     filter: any
     sort?: string[]
-}
-
-interface SortableAttribute {
-    value: string
-    label: string
+    limit: number,
+    offset: number
 }
 
 // Use localStorage for viewType
@@ -51,43 +49,18 @@ const timeTaken = ref<number>(0)
 const totalResults = ref<number>(0)
 const shownResults = ref<number>(0)
 
-watch(
-    searchQuery,
-    debounce(() => {
-        if (selectedIndex.value) {
-            updateSearch(selectedIndex.value)
-        }
-    }, 200)
-)
+const limit = ref<number>(20);
+const offset = ref<number>(0);
 
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
-    let timerId: ReturnType<typeof setTimeout>
-
-    return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-        const context = this
-        clearTimeout(timerId)
-        timerId = setTimeout(() => {
-            func.apply(context, args)
-        }, delay)
+const debouncedUpdateSearch = debounce((index) => {
+    if (index !== null) {
+        updateSearch(index);
     }
-}
+}, 200);
 
-watch(filters, () => {
-    debounce(() => {
-        if (selectedIndex.value) {
-            updateSearch(selectedIndex.value)
-        }
-    }, 200)
-})
-
-watch(sort, () => {
-    debounce(() => {
-        if (selectedIndex.value) {
-        updateSearch(selectedIndex.value)
-    }
-    }, 200)
-
-})
+watch([filters, sort, searchQuery, offset, limit], () => {
+    debouncedUpdateSearch(selectedIndex.value);
+}, { deep: true });
 
 async function updateSortableAttributes() {
     try {
@@ -165,7 +138,9 @@ async function updateSearch(uid: string, changeOfIndex: boolean = false) {
             })
 
         let searchObject: SearchObject = {
-            filter: formattedFilters
+            filter: formattedFilters,
+            offset: offset.value,
+            limit: limit.value,
         }
 
         if (sort.value.length > 0) {
@@ -226,36 +201,51 @@ onMounted(() => {
                                     <input type="text" v-model="searchQuery" class="form-control bg-dark"
                                         placeholder="" />
                                 </div>
-                                <div class="d-flex gap-2 mb-2">
-                                    <div class="d-flex flex-column w-100">
-                                        <label for="filters">Filters</label>
-                                        <div class="input-group dropdown">
-                                            <span class="input-group-text bg-dark" data-bs-toggle="dropdown"
-                                                aria-expanded="false">
-                                                <i class="fa fa-filter"></i>
-                                            </span>
-                                            <input type="text" v-model="filters" name="filters" id="filters"
-                                                class="form-control bg-dark" />
-                                            <div class="dropdown-menu p-2 overflow-auto" style="max-height: 10rem;">
-                                                <p class="fw-bold mb-2">Filterable attributes</p>
-                                                <p v-for="(attribute, index) in filterableAttributes" :key="index">
-                                                    {{ attribute }}
-                                                </p>
+                                <div class="d-flex gap-2">
+                                    <div class="d-flex w-75 gap-2 mb-2">
+                                        <div class="d-flex flex-column w-100">
+                                            <label for="filters">Filters</label>
+                                            <div class="input-group dropdown">
+                                                <span class="input-group-text bg-dark" data-bs-toggle="dropdown"
+                                                    aria-expanded="false">
+                                                    <i class="fa fa-filter"></i>
+                                                </span>
+                                                <input type="text" v-model="filters" name="filters" id="filters"
+                                                    class="form-control bg-dark" />
+                                                <div class="dropdown-menu p-2 overflow-auto" style="max-height: 10rem;">
+                                                    <p class="fw-bold mb-2">Filterable attributes</p>
+                                                    <p v-for="(attribute, index) in filterableAttributes" :key="index">
+                                                        {{ attribute }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex flex-column w-100">
+                                            <label for="sort">Sort</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-dark">
+                                                    <i class="fa fa-sort"></i>
+                                                </span>
+                                                <multiselect v-model="sort" :options="sortableAttributes"
+                                                    :searchable="true" :multiple="true" label="label" track-by="value"
+                                                    class="form-control multiselect"></multiselect>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="d-flex flex-column w-100">
-                                        <label for="sort">Sort</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-dark">
-                                                <i class="fa fa-sort"></i>
-                                            </span>
-                                            <multiselect v-model="sort" :options="sortableAttributes" :searchable="true"
-                                                :multiple="true" label="label" track-by="value"
-                                                class="form-control multiselect"></multiselect>
+                                    <div class="d-flex w-25 gap-2">
+                                        <div class="d-flex flex-column w-100">
+                                            <label for="sort">Limit</label>
+                                            <input type="number" name="limit" id="limit" v-model="limit"
+                                                class="form-control bg-dark">
+                                        </div>
+                                        <div class="d-flex flex-column w-100">
+                                            <label for="sort">Offset</label>
+                                            <input type="number" name="offset" id="offset" v-model="offset"
+                                                class="form-control bg-dark">
                                         </div>
                                     </div>
                                 </div>
+                                <div class="d-flex"></div>
                                 <p class="invalid-feedback d-block"> {{ errorVisible }}</p>
                             </div>
                         </div>
@@ -271,12 +261,14 @@ onMounted(() => {
                         <div v-for="(document, index) in documents" :key="index" v-if="viewType == 'raw'">
                             <div class="card mb-2">
                                 <div class="card-body">
-                                    <JsonViewer :data="document"></JsonViewer>
+                                    <JsonViewer :data="document ?? {}"></JsonViewer>
                                 </div>
                             </div>
                         </div>
-                        <div class="table-responsive" v-if="viewType == 'table'">
-                            <DynamicTable :data="documents"></DynamicTable>
+                        <div v-if="documents != null">
+                            <div class="table-responsive" v-if="viewType == 'table'">
+                                <DynamicTable :data="documents ?? {}"></DynamicTable>
+                            </div>
                         </div>
                     </div>
                 </div>

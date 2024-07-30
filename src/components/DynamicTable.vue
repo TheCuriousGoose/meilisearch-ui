@@ -9,7 +9,9 @@ const isJson = (value: any) => {
         firstSymbol = value[0];
     } else {
         value = JSON.stringify(value);
-        firstSymbol = value[0];
+        if (value) {
+            firstSymbol = value[0];
+        }
     }
 
     if (firstSymbol == '{' || firstSymbol == '[') {
@@ -21,7 +23,7 @@ const isJson = (value: any) => {
     }
 };
 
-const jsonData = ref<any>(null);
+const jsonData = ref<any>({});
 
 type TableData = Array<Record<string, any>>;
 
@@ -60,6 +62,26 @@ const formatJSON = (data: string | object) => {
 const showJsonModal = (data: any) => {
     jsonData.value = data;
 };
+
+const formatText = (text: string): string => {
+    const regex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{6}))?Z$/;
+
+    if (regex.test(text)) {
+        const match = text.match(regex);
+        if (match) {
+            const [, year, month, day, hours, minutes, seconds] = match;
+            const date = new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`);
+            if (!isNaN(date.getTime())) {
+                return [
+                    `${year}-${month}-${day}`,
+                    `${hours}:${minutes}:${seconds}`
+                ].join(' ');
+            }
+        }
+    }
+
+    return text ?? null;
+};
 </script>
 
 <template>
@@ -72,7 +94,7 @@ const showJsonModal = (data: any) => {
             </thead>
             <tbody>
                 <tr v-for="(item, index) in props.data" :key="index">
-                    <td v-for="(column, colIndex) in columns" :key="colIndex">
+                    <td v-for="(column, colIndex) in columns" :key="colIndex" style="text-wrap: nowrap;" class="me-2">
                         <template v-if="isJson(item[column])">
                             <span style="cursor: pointer;" class="text-decoration-underline"
                                 @click="showJsonModal(item[column])" data-bs-toggle="modal"
@@ -80,7 +102,7 @@ const showJsonModal = (data: any) => {
                                     formatJSON(item[column]) }}</span>
                         </template>
                         <template v-else>
-                            {{ item[column] ? item[column] : 'null' }}
+                            {{ formatText(item[column]) }}
                         </template>
                     </td>
                 </tr>
