@@ -33,7 +33,7 @@ const client = new Meilisearch({
     apiKey: instance.key
 })
 
-const selectedIndex = useLocalStorage<string>('selectedIndex', '')
+const selectedIndex = useLocalStorage<string>('selectedIndex' + instanceId, '')
 const indexes = ref<object | any>([])
 const documents = ref<object | any>([])
 
@@ -128,6 +128,7 @@ async function updateSearch(uid: string, changeOfIndex: boolean = false) {
         if (changeOfIndex) {
             filters.value = '';
             sort.value = [];
+            searchQuery.value = '';
         }
 
         let formattedFilters = filters.value
@@ -173,10 +174,20 @@ onMounted(() => {
 
 <template>
     <div class="container-fluid">
-        <instanceInfo :client="client" />
+        <div class="d-flex gap-2">
+            <div>
+                <RouterLink to="/" class="btn btn-secondary btn-sm mb-2 text-nowrap text-white">
+                    <i class="fa fa-arrow-left fa-sm"></i>
+                    Back
+                </RouterLink>
+            </div>
+            <div class="w-100">
+                <instanceInfo :client="client" />
+            </div>
+        </div>
         <div class="row d-flex">
             <div class="col-3">
-                <IndexesList :indexes="indexes" :selectedIndex="selectedIndex" @update-search="updateSearch" />
+                <IndexesList :indexes="indexes" :client="client" :selectedIndex="selectedIndex" @update-search="updateSearch" />
             </div>
             <div class="col-9 mb-1">
                 <div class="card mb-2">
