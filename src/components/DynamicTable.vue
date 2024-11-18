@@ -25,10 +25,8 @@ const isJson = (value: any) => {
 
 const jsonData = ref<any>({});
 
-type TableData = Array<Record<string, any>>;
-
 const props = defineProps<{
-    data: TableData;
+    data: object|any[];
 }>();
 
 const columns = computed(() => {

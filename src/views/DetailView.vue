@@ -4,10 +4,9 @@ import { useRoute } from 'vue-router'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { Meilisearch } from 'meilisearch'
 import instanceInfo from '../components/InstanceInfo.vue'
-import JsonViewer from '../components/JsonViewer.vue'
+import DataView from '@/components/DataView.vue'
 import IndexesList from '../components/IndexesList.vue'
 import Multiselect from 'vue-multiselect'
-import DynamicTable from '../components/DynamicTable.vue'
 import FacetModal from '../components/FacetModal.vue'
 import { debounce } from '@/utils/debounce'
 
@@ -19,7 +18,7 @@ interface SearchObject {
 }
 
 // Use localStorage for viewType
-const viewType = useLocalStorage<'table' | 'raw'>('viewType', 'table')
+const viewType = useLocalStorage<'table' | 'raw' | 'cards'>('viewType', 'table')
 const errorVisible = ref<string>()
 
 const route = useRoute()
@@ -187,7 +186,8 @@ onMounted(() => {
         </div>
         <div class="row d-flex">
             <div class="col-3">
-                <IndexesList :indexes="indexes" :client="client" :selectedIndex="selectedIndex" @update-search="updateSearch" />
+                <IndexesList :indexes="indexes" :client="client" :selectedIndex="selectedIndex"
+                    @update-search="updateSearch" />
             </div>
             <div class="col-9 mb-1">
                 <div class="card mb-2">
@@ -198,6 +198,7 @@ onMounted(() => {
                             <select name="viewType" v-model="viewType" id="viewType" class="form-select">
                                 <option value="raw">Raw</option>
                                 <option value="table">Table</option>
+                                <option value="cards">Cards</option>
                             </select>
                         </div>
                     </div>
@@ -268,19 +269,7 @@ onMounted(() => {
                                 <p class="text-muted">{{ shownResults }} shown out of {{ totalResults }} results</p>
                             </div>
                         </div>
-
-                        <div v-for="(document, index) in documents" :key="index" v-if="viewType == 'raw'">
-                            <div class="card mb-2">
-                                <div class="card-body">
-                                    <JsonViewer :data="document ?? {}"></JsonViewer>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-if="documents != null">
-                            <div class="table-responsive" v-if="viewType == 'table'">
-                                <DynamicTable :data="documents ?? {}"></DynamicTable>
-                            </div>
-                        </div>
+                        <DataView :view-type="viewType" :documents="documents"></DataView>
                     </div>
                 </div>
             </div>
