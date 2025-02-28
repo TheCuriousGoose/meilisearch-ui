@@ -1,17 +1,38 @@
-$primary: #463698;
-$secondary: #ff5cb2;
-$success: #28a745;
-$info: #17a2b8;
-$warning: #ffc107;
-$danger: #dc3545;
-$light: #f8f9fa;
-$dark: #343a40;
+// Modern color palette
+$primary: #6366f1; // Indigo
+$secondary: #ec4899; // Pink
+$success: #22c55e; // Green
+$info: #0ea5e9; // Sky blue
+$warning: #f59e0b; // Amber
+$danger: #ef4444; // Red
+$light: #f9fafb;
+$dark: #111827;
 
-$transparent-white: rgba(36, 32, 32, 0.259);
-$border-color: hsla(0, 0%, 100%, 0.4);
+// Background colors
+$bg-dark: #0f172a; // Slate 900
+$transparent-white: rgba(255, 255, 255, 0.03);
+$border-color: rgba(255, 255, 255, 0.1);
 
-$font-family-base: 'Roboto', sans-serif;
+// Typography
+$font-family-base: 'Inter', 'Roboto', sans-serif;
 $font-size-base: 1rem;
 
+// Links
 $link-color: $primary;
-$link-hover-color: darken($primary, 10%);
+$link-hover-color: lighten($primary, 10%);
+
+// Modern UI Variables
+$card-border-radius: 0.75rem;
+$btn-border-radius: 0.5rem;
+$transition-base: all 0.2s ease-in-out;
+$box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+// Filter specific variables
+$filter-border-radius: $card-border-radius;
+$filter-bg: rgba(17, 24, 39, 0.4);
+$filter-border-color: $border-color;
+$filter-item-bg: rgba(0, 0, 0, 0.1);
+$filter-item-hover-bg: rgba(255, 255, 255, 0.05);
+$filter-pill-bg: rgba($primary, 0.15);
+$filter-pill-border: rgba($primary, 0.2);
