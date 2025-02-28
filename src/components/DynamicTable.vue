@@ -26,7 +26,7 @@ const isJson = (value: any) => {
 const jsonData = ref<any>({});
 
 const props = defineProps<{
-    data: object|any[];
+    data: object | any[];
 }>();
 
 const columns = computed(() => {
@@ -88,6 +88,7 @@ const formatText = (text: string): string => {
             <thead>
                 <tr>
                     <th scope="col" v-for="(column, index) in columns" :key="index">{{ column }}</th>
+                    <th>actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -102,6 +103,12 @@ const formatText = (text: string): string => {
                         <template v-else>
                             {{ formatText(item[column]) }}
                         </template>
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm text-nowrap d-flex align-items-center">
+                            <i class="fas fa-eye me-2"></i>
+                            Edit
+                        </button>
                     </td>
                 </tr>
             </tbody>

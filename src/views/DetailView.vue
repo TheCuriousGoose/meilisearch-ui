@@ -22,7 +22,7 @@ const viewType = useLocalStorage<'table' | 'raw' | 'cards'>('viewType', 'table')
 const errorVisible = ref<string>()
 
 const route = useRoute()
-const instanceId = route.params.id
+const instanceId = route.params.id;
 
 const instances = useLocalStorage('instances', [])
 const instance = instances.value.find((instance: any) => instance.id == instanceId) || { url: '', key: '' }
